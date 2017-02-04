@@ -19,7 +19,7 @@ INTERNET net;
 AltSoftSerial mySerial;
 AuthClient *authclient;
 
-MicroGear microgear(xxxx);
+MicroGear microgear(client);
 int timer = 0;
 
 void onMsghandler(char *topic, uint8_t* msg, unsigned int msglen) {
