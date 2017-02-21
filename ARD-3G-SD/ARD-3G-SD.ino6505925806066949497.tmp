@@ -10,6 +10,7 @@
 */
 
 #include "TEE_UC20.h"
+#include "SoftwareSerial.h"
 #include <AltSoftSerial.h>
 #include "internet.h"
 #include "uc_mqtt.h"
@@ -139,15 +140,18 @@ void saveSD() {
 
 void setup()  {
   Serial.begin(9600);
-  Serial.print(F("freeRam = "));
-  Serial.println(freeMemory());
 
   SD.begin(SD_CS);
   dataLog = SD.open("data.txt", FILE_WRITE);
-//  dataLog.println(random(analogRead(A0)));
-//  dataLog.close();
-//  SD.exists(SD_CS);
-//  Serial.println(F("Save..."));
+  //  dataLog.println(random(analogRead(A0)));
+  //  dataLog.close();
+  //  dataLog = SD.open("data.txt");
+  //  while (dataLog.available()) {
+  //    Serial.write(dataLog.read());
+  //  }
+  //  dataLog.close();
+  //  SD.exists(SD_CS);
+
 
   pinMode(6, OUTPUT);
   digitalWrite(6, 0);
@@ -171,6 +175,9 @@ void setup()  {
   Serial.println(F("Show My IP"));
   Serial.println(net.GetIP());
 
+  Serial.print("freeRam = ");
+  Serial.println(freeMemory());
+
   mqtt.callback = callback;
   connect_server();
 
@@ -185,6 +192,7 @@ void setup()  {
 }
 
 void callback(String topic , char *playload, unsigned char length)  {
+  Serial.println();
   Serial.println(F("%%%%%%%%%%%%%%%%%%%%%%%%%%%%"));
   Serial.print(F("Topic --> "));
   Serial.println(topic);
