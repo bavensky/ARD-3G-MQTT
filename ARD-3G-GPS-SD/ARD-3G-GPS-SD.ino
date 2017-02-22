@@ -3,8 +3,8 @@
 #include "internet.h"
 #include "uc_mqtt.h"
 #include "gnss.h"
-//#include <Fat16.h>
-//#include <Fat16util.h>
+#include <Fat16.h>
+#include <Fat16util.h>
 #include <MemoryFree.h>
 #include <ArduinoJson.h>
 
@@ -14,8 +14,8 @@ UCxMQTT mqtt;
 
 #define CHIP_SELECT 5
 #define OUTPUT_FILE  "dataLog.csv"
-//SdCard card;
-//Fat16 file;
+SdCard card;
+Fat16 file;
 
 //SIM AIS  internet
 #define APN "internet"
@@ -142,9 +142,11 @@ void setup()  {
   ////////////////////////////JSON////////////////////////////
   StaticJsonBuffer<200> jsonBuffer;
   JsonObject& root = jsonBuffer.createObject();
-  root["lat"] = gps_lat;
-  root["lon"] = gps_lon;
-  root["alt"] = gps_alt;
+  root["data"] = "data";
+  JsonArray& data = root.createNestedArray("data");
+  data.add(gps_lat);
+  data.add(gps_lon);
+  data.add(gps_alt);
   root.printTo(Serial);
   ////////////////////////////SDCARD////////////////////////////
   //  card.begin(CHIP_SELECT);
@@ -152,7 +154,7 @@ void setup()  {
   //  file.open(OUTPUT_FILE, O_CREAT | O_APPEND | O_WRITE);
   //  file.isOpen();
   //  Serial.println(F("Writing...."));
-  //  file.print("Lat,");
+  //  file.print(root["data"]);
   //  file.println(gps_lat);
   //  file.print("Lon,");
   //  file.println(gps_lon);
@@ -178,9 +180,7 @@ void setup()  {
   unsigned char ret = mqtt.Connect(MQTT_ID, MQTT_USER, MQTT_PASSWORD);
   Serial.println(mqtt.ConnectReturnCode(ret));
   digitalWrite(6, 1);
-  mqtt.Publish("/SmartTrash/gearname/data", gps_lat, false);
-  mqtt.Publish("/SmartTrash/gearname/data", gps_lon, false);
-  mqtt.Publish("/SmartTrash/gearname/data", gps_alt, false);
+  mqtt.Publish("/SmartTrash/gearname/data", root["data"], false);
   delay(1000);
   digitalWrite(6, 0);
 }
