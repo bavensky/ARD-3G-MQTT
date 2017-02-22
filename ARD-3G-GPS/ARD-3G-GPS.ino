@@ -15,6 +15,7 @@ UCxMQTT mqtt;
 const uint8_t CHIP_SELECT = 5;
 SdCard card;
 Fat16 file;
+#define OUTPUT_FILE  "dataLog.csv"
 
 //SIM AIS  internet
 #define APN "internet"
@@ -75,43 +76,34 @@ void setup()  {
     digitalWrite(6, 0);
   }
 
-  byte _hour, _minute, _second, _day, _month, _year, _batt;
-  byte _volume, _temp, _humid, _pitch, _roll;
-  int _carbon, _methane, _press, _alt;
-  word _light;
-  float _lat, _lon;
-  boolean _lidStatus, _flameStatus, _soundStatus;
-
-  card.begin(CHIP_SELECT);
-  Fat16::init(&card);
-  char name[] = "WRITE00.TXT";
-  for (uint8_t i = 0; i < 100; i++) {
-    name[5] = i / 10 + '0';
-    name[6] = i % 10 + '0';
-    // O_CREAT - create the file if it does not exist
-    // O_EXCL - fail if the file exists
-    // O_WRITE - open for write
-    if (file.open(name, O_CREAT | O_EXCL | O_WRITE)) break;
-  }
-  //  file.open(name, O_CREAT | O_EXCL | O_WRITE);
-  file.isOpen();
-  PgmPrint("Writing to: ");
-  Serial.println(name);
-  file.print("A0 : ");
-  file.print(String(analogRead(A0)));
-  file.print("\r");
-  file.print("A1 : ");
-  file.print(analogRead(A1));
-  file.print("\n");
-  file.print("A0 : ");
-  file.print(String(analogRead(A0)));
-  file.print("\r");
-  file.print("A1 : ");
-  file.print(analogRead(A1));
-  file.print("\n");
-  PgmPrint("Done");
-  file.close();
-  delay(2000);
+//  byte _hour, _minute, _second, _day, _month, _year, _batt;
+//  byte _volume, _temp, _humid, _pitch, _roll;
+//  int _carbon, _methane, _press, _alt;
+//  word _light;
+//  float _lat, _lon;
+//  boolean _lidStatus, _flameStatus, _soundStatus;
+//
+//  card.begin(CHIP_SELECT);
+//  Fat16::init(&card);
+//  file.open(OUTPUT_FILE, O_CREAT | O_APPEND | O_WRITE);
+//  file.isOpen();
+//  Serial.print("Writing to: ");
+//  Serial.println(OUTPUT_FILE);
+//  file.print("A0 : ");
+//  file.print(String(analogRead(A0)));
+//  file.print("\r");
+//  file.print("A1 : ");
+//  file.print(analogRead(A1));
+//  file.print("\n");
+//  file.print("A00 : ");
+//  file.print(String(analogRead(A0)));
+//  file.print("\r");
+//  file.print("A11 : ");
+//  file.print(analogRead(A1));
+//  file.print("\n");
+//  Serial.println("Done");
+//  file.close();
+//  delay(2000);
 
   //  mqtt.callback = callback;
   connect_server();
