@@ -3,8 +3,8 @@
 #include "internet.h"
 #include "uc_mqtt.h"
 #include "gnss.h"
-#include <Fat16.h>
-#include <Fat16util.h>
+//#include <Fat16.h>
+//#include <Fat16util.h>
 #include <MemoryFree.h>
 #include <ArduinoJson.h>
 
@@ -14,8 +14,8 @@ UCxMQTT mqtt;
 
 #define CHIP_SELECT 5
 #define OUTPUT_FILE  "dataLog.csv"
-SdCard card;
-Fat16 file;
+//SdCard card;
+//Fat16 file;
 
 //SIM AIS  internet
 #define APN "internet"
@@ -35,9 +35,9 @@ Fat16 file;
 
 AltSoftSerial mySerial;
 
-//void debug(String data) {
-//  Serial.println(data);
-//}
+void debug(String data) {
+  Serial.println(data);
+}
 
 void setup()  {
   byte _hour, _minute, _second, _day, _month, _year, _batt;
@@ -55,7 +55,7 @@ void setup()  {
   digitalWrite(6, 0);
   /////////////////////////////3G//////////////////////////////////
   gsm.begin(&mySerial, 9600);
-  //  gsm.Event_debug = debug;
+  gsm.Event_debug = debug;
   Serial.println(F("UC20"));
   gsm.PowerOn();
   while (gsm.WaitReady()) {}
@@ -142,10 +142,13 @@ void setup()  {
   ////////////////////////////JSON////////////////////////////
   StaticJsonBuffer<200> jsonBuffer;
   JsonObject& root = jsonBuffer.createObject();
-  root["data"] = "data";
+  root["data"];
   JsonArray& data = root.createNestedArray("data");
+  //  data.add("lat");
   data.add(gps_lat);
+  //  data.add("lon");
   data.add(gps_lon);
+  //  data.add("alt");
   data.add(gps_alt);
   root.printTo(Serial);
   ////////////////////////////SDCARD////////////////////////////
