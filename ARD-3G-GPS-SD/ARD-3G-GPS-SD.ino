@@ -144,12 +144,12 @@ void setup()  {
   JsonObject& root = jsonBuffer.createObject();
   root["data"];
   JsonArray& data = root.createNestedArray("data");
-  //  data.add("lat");
-  data.add(gps_lat);
+  data.add(String("location:" + gps_lat + "," + gps_lon + "," + gps_alt));
+  //  data.add(gps_lat);
   //  data.add("lon");
-  data.add(gps_lon);
+  //  data.add(gps_lon);
   //  data.add("alt");
-  data.add(gps_alt);
+  //  data.add(gps_alt);
   root.printTo(Serial);
   ////////////////////////////SDCARD////////////////////////////
   //  card.begin(CHIP_SELECT);
