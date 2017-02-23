@@ -246,13 +246,13 @@ void loop() {
       && _flameStatus != 0 && _soundStatus != 0 && _carbon != 0 && _methane != 0
       &&  _light != 0 && _pitch != 0 && _roll != 0 && _press != 0  && _batt != 0 )
   {
+    Serial.println(F("MQTT..."));
+    
     String data_s1 = String(_volume) + "," + String(_lidStatus) + "," + String(_temp) + ","
                      + String(_humid) + "," + String(_flameStatus) + "," + String(_soundStatus) + "," +
                      String(_carbon) + "," + String(_methane) + "," + String(_light);
     String data_s2 = String(_pitch) + "," + String(_roll) + "," + String(_press) + "," + String(_batt);
     String data_s3 = gps_lat + ","  + gps_lon + "," + gps_alt;
-
-    Serial.println(F("MQTT..."));
 
     mqtt.Publish("/SmartTrash/gearname/binID/id", String(_binID), false);
     mqtt.Publish("/SmartTrash/gearname/binID/data1", data_s1, false);
