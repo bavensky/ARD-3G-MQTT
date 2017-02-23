@@ -3,19 +3,11 @@
 #include "internet.h"
 #include "uc_mqtt.h"
 #include "gnss.h"
-//#include <Fat16.h>
-//#include <Fat16util.h>
 #include <MemoryFree.h>
-//#include <ArduinoJson.h>
 
 GNSS gps;
 INTERNET net;
 UCxMQTT mqtt;
-
-//#define CHIP_SELECT 5
-//#define OUTPUT_FILE  "dataLog.csv"
-//SdCard card;
-//Fat16 file;
 
 //SIM AIS  internet
 #define APN "internet"
@@ -39,8 +31,22 @@ AltSoftSerial mySerial;
 volatile uint8_t RX_buffer[RX_buffer_size] = {0};
 volatile uint16_t  RX_pointer = 0;
 volatile uint16_t  Decode_pointer = 0;
+unsigned long prev = 0;
 
-uint32_t time_prev;
+//byte _hour, _minute, _second, _day, _month, _year, _batt;
+float _binID, _volume, _pitch, _roll, _batt;
+float _temp, _humid, _lat, _lon, _alt;
+float _lidStatus, _flameStatus, _soundStatus;
+float  _light, _carbon, _methane;
+float _press;
+byte count = 0;
+
+//byte _hour, _minute, _second, _day, _month, _year, _batt;
+//byte _binID, _volume, _pitch, _roll; //_temp, _humid, ;
+//float _temp, _humid; //  float _lat, _lon;
+//int _carbon, _methane, _press, _alt;
+//word _light;
+//boolean _lidStatus, _flameStatus, _soundStatus;
 
 void debug(String data) {
   Serial.println(data);
@@ -109,12 +115,12 @@ void Decode_press(float* value, uint8_t header)
 }
 
 void setup()  {
-  byte _hour, _minute, _second, _day, _month, _year, _batt;
-  byte _binID, _volume, _pitch, _roll; //_temp, _humid, ;
-  float _temp, _humid; //  float _lat, _lon;
-  int _carbon, _methane, _press, _alt;
-  word _light;
-  boolean _lidStatus, _flameStatus, _soundStatus;
+  //  byte _hour, _minute, _second, _day, _month, _year, _batt;
+  //  byte _binID, _volume, _pitch, _roll; //_temp, _humid, ;
+  //  float _temp, _humid; //  float _lat, _lon;
+  //  int _carbon, _methane, _press, _alt;
+  //  word _light;
+  //  boolean _lidStatus, _flameStatus, _soundStatus;
 
   Serial.begin(9600);
   Serial.print(F("freeRam = "));
@@ -209,56 +215,6 @@ void setup()  {
     gps_lon = "";
     gps_alt = "";
   }
-
-  ////////////////////////////FixVariable////////////////////////////
-  _binID = 1;
-  _volume = 5;
-  _lidStatus = true;
-  _temp = 25;
-  _humid  = 40;
-  _flameStatus = true;
-  _soundStatus = false;
-  _carbon = 5000;
-  _methane = 5000;
-  _light = 150;
-  _pitch = 90;
-  _roll = 90;
-  _press = 10000;
-  _batt = 100;
-  _hour = 18;
-  _minute = 55;
-  _second = 30;
-  _day = 22;
-  _month = 2;
-  _year = 2017;
-
-  ////////////////////////////SDCARD////////////////////////////
-  //  card.begin(CHIP_SELECT);
-  //  Fat16::init(&card);
-  //  file.open(OUTPUT_FILE, O_CREAT | O_APPEND | O_WRITE);
-  //  file.isOpen();
-  //  Serial.println(F("Writing...."));
-  //  file.print(root["data"]);
-  //  file.println(gps_lat);
-  //  file.print("Lon,");
-  //  file.println(gps_lon);
-  //  file.print("Alt,");
-  //  file.println(gps_alt);
-  //  file.close();
-  //  delay(2000);
-  //////////////////////////////UART////////////////////////////////
-  //  while (Decode_pointer != RX_pointer) {
-  //    Decode(&_temp, 0xff);
-  //    Decode(&_humid, 0xfe);
-  //    Decode(&_temp, 0xfd);
-  //    Decode(&_temp, 0xfc);
-  //    Decode(&_temp, 0xfb);
-  //    Decode_press(&_temp, 0xfa);
-  //    Decode(&_temp, 0xf9);
-  //    Decode(&_temp, 0xf8);
-  //    Decode_pointer++;
-  //    if (Decode_pointer >= RX_buffer_size)Decode_pointer = 0;
-  //  }
   //////////////////////////////MQTT////////////////////////////////
   do  {
     Serial.println(F("Connect Server"));
@@ -274,23 +230,6 @@ void setup()  {
   Serial.println(F("Server Connected"));
   unsigned char ret = mqtt.Connect(MQTT_ID, MQTT_USER, MQTT_PASSWORD);
   Serial.println(mqtt.ConnectReturnCode(ret));
-  digitalWrite(6, 1);
-  mqtt.Publish("/SmartTrash/gearname/binID", String(_binID), false);
-  mqtt.Publish("/SmartTrash/gearname/binID/sensor/volume", String(_volume), false);
-  mqtt.Publish("/SmartTrash/gearname/binID/sensor/lid",    String(_lidStatus), false);
-  mqtt.Publish("/SmartTrash/gearname/binID/sensor/temp",   String(_temp), false);
-  mqtt.Publish("/SmartTrash/gearname/binID/sensor/humid",  String(_humid), false);
-  mqtt.Publish("/SmartTrash/gearname/binID/sensor/flame",  String(_flameStatus), false);
-  mqtt.Publish("/SmartTrash/gearname/binID/sensor/sound",  String(_soundStatus), false);
-  mqtt.Publish("/SmartTrash/gearname/binID/sensor/carbon", String(_carbon), false);
-  mqtt.Publish("/SmartTrash/gearname/binID/sensor/methane", String(_methane), false);
-  mqtt.Publish("/SmartTrash/gearname/binID/sensor/light",  String(_light), false);
-  mqtt.Publish("/SmartTrash/gearname/binID/sensor/pitch",  String(_pitch), false);
-  mqtt.Publish("/SmartTrash/gearname/binID/sensor/rill",   String(_roll), false);
-  //  mqtt.Publish("/SmartTrash/gearname/binID/sensor/press",  String(_press), false);
-  mqtt.Publish("/SmartTrash/gearname/binID/sensor/batt",   String(_batt), false);
-  delay(2000);
-  digitalWrite(6, 0);
   //  mqtt.callback = callback;
   //  connect_server();
 }
@@ -335,33 +274,59 @@ void loop() {
   digitalWrite(6, 0);
   delay(100);
 
-  uint32_t time_now = millis();
-  if (time_now - time_prev >= 1000) {
-    time_prev = time_now;
+  unsigned long current = millis();
+  if (current - prev > 1000) {
+    prev = current;
+    Serial.print("Decode...");
     while (Decode_pointer != RX_pointer) {
-      Decode(&_temp, 0xff);
-      Decode(&_humid, 0xfe);
+      Decode(&_binID, 0xff);
+      Decode(&_volume, 0xfe);
+      Decode(&_lidStatus, 0xfd);
+      Decode(&_temp, 0xfc);
+      Decode(&_humid, 0xfb);
+      Decode(&_flameStatus, 0xfa);
+      Decode(&_soundStatus, 0xf9);
+      Decode_press(&_carbon, 0xf8);
+      Decode_press(&_methane, 0xf7);
+      Decode_press(&_light, 0xf6);
+      Decode(&_pitch, 0xf5);
+      Decode(&_roll, 0xf4);
+      Decode_press(&_press, 0xf3);
+      Decode(&_batt, 0xf2);
       Decode_pointer++;
       if (Decode_pointer >= RX_buffer_size)Decode_pointer = 0;
     }
-    Serial.print("data ");
-    Serial.println(_temp);
+    Serial.print(F("data = "));  Serial.print(_binID);
+    Serial.print(F(" "));  Serial.print(_volume);
+    Serial.print(F(" "));  Serial.print(_lidStatus);
+    Serial.print(F(" "));  Serial.print(_temp);
+    Serial.print(F(" "));  Serial.print(_humid);
+    Serial.print(F(" "));  Serial.print(_flameStatus);
+    Serial.print(F(" "));  Serial.print(_soundStatus);
+    Serial.print(F(" "));  Serial.print(_carbon);
+    Serial.print(F(" "));  Serial.print(_methane);
+    Serial.print(F(" "));  Serial.print(_light);
+    Serial.print(F(" "));  Serial.print(_pitch);
+    Serial.print(F(" "));  Serial.print(_roll);
+    Serial.print(F(" "));  Serial.print(_press);
+    Serial.print(F(" "));  Serial.println(_batt);
   }
 
-  //  if (_temp == 20) {
-  //    digitalWrite(6, 1);
-  //  } else {
-  //    digitalWrite(6, 0);
-  //  }
-  //  Serial.print("Temp ");
-  //  Serial.print(_temp);
-  //  Serial.print(" Humid ");
-  //  Serial.println(_humid);
-  //  if (mqtt.ConnectState() == false) {
-  //    Serial.println(F("Reconnect"));
-  //    connect_server();
-  //  }
+  if (_binID != 0 && _volume != 0 && _lidStatus != 0 && _temp != 0 && _humid != 0
+      && _flameStatus != 0 && _soundStatus != 0 && _carbon != 0 && _methane != 0
+      &&  _light != 0 && _pitch != 0 && _roll != 0 && _press != 0  && _batt != 0 )
+  {
+    String data_s = String(_volume) + "," + String(_lidStatus) + "," + String(_temp) + ","
+                    + String(_humid) + "," + String(_flameStatus) + "," + String(_soundStatus) + ","
+                    + String(_carbon) + "," + String(_methane) + "," + String(_light) + ","
+                    + String(_pitch) + "," + String(_roll) + ","
+                    + String(_press) + "," + String(_batt);
 
-  //  mqtt.MqttLoop();
+    mqtt.Publish("/SmartTrash/gearname/binID/data", data_s, false);
+    Serial.print(F("MQTT..."));
+    Serial.println(data_s);
+    delay(2000);
+    while (1);
+  }
 }
 
