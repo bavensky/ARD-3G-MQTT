@@ -27,6 +27,7 @@ UCxMQTT mqtt;
 
 AltSoftSerial mySerial;
 
+#define _binID 1234
 #define RX_buffer_size 100
 volatile uint8_t RX_buffer[RX_buffer_size] = {0};
 volatile uint16_t  RX_pointer = 0;
@@ -39,12 +40,12 @@ String gps_lat = "";
 String gps_lon = "";
 String gps_alt = "";
 
-float _binID, _volume, _pitch, _roll, _batt;
+float _volume, _pitch, _roll;
 float _temp, _humid, _lat, _lon, _alt;
 float _lidStatus, _flameStatus, _soundStatus;
 float  _light, _carbon, _methane;
 float _press;
-byte count = 0;
+byte _batt = 0;
 
 //////////////////////////////UART////////////////////////////////
 void serialEvent() {
@@ -130,18 +131,27 @@ void setup()  {
   Serial.println(F("Enable NMEA"));
   gps.EnableNMEA();
 
-  String gps_s = gps.GetNMEA("GGA");
-  Serial.println(gps.GetNMEA("GGA"));
-  while (gps_s.substring(0, 8) == "$GPGGA,," || gps_s.substring(0, 8) == "Please W" || gps_s.substring(0, 8) == "$GPGGA,1") {
-    gps_s = gps.GetNMEA("GGA");
+  //  gps_data = gps.GetNMEA("GGA");
+  //  Serial.println(gps.GetNMEA("GGA"));
+  //  while (gps_data.substring(0, 8) == "$GPGGA,," || gps_data.substring(0, 8) == "Please W" || gps_data.substring(0, 8) == "$GPGGA,1") {
+  //    gps_data = gps.GetNMEA("GGA");
+  //    Serial.println(gps_data);
+  //    digitalWrite(6, 1);
+  //    delay(3000);
+  //    digitalWrite(6, 0);
+  //  }
+
+  for (int i = 1; i <= 7; i++) {
+    gps_data = gps.GetNMEA("GGA");
     digitalWrite(6, 1);
     delay(3000);
     digitalWrite(6, 0);
   }
-  Serial.print(F("Done... "));
-  Serial.println(gps.GetNMEA("GGA"));
 
-  gps_data = gps.GetNMEA("GGA");
+  Serial.print(F("Done... "));
+  //  Serial.println(gps.GetNMEA("GGA"));
+
+  //  gps_data = gps.GetNMEA("GGA");
   if (gps_data.substring(0, 6) == "$GPGGA") {
     gps_data.toCharArray(GNSS_data, 75);
 
@@ -196,6 +206,10 @@ void setup()  {
   Serial.println(F("Server Connected"));
   unsigned char ret = mqtt.Connect(MQTT_ID, MQTT_USER, MQTT_PASSWORD);
   Serial.println(mqtt.ConnectReturnCode(ret));
+  // mqtt first sent
+  mqtt.Publish("/SmartTrash/gearname/binID/id", String(_binID), false);
+  String data_s4 = gps_lat + ","  + gps_lon + "," + gps_alt;
+  mqtt.Publish("/SmartTrash/gearname/binID/gps", data_s4, false);
 }
 //////////////////////////////mainLOOP////////////////////////////////
 void loop() {
@@ -205,29 +219,26 @@ void loop() {
   delay(100);
 
   unsigned long current = millis();
-  if (current - prev > 1000) {
+  if (current - prev > 500) {
     prev = current;
     Serial.println(F("Decode..."));
     while (Decode_pointer != RX_pointer) {
-      Decode(&_binID, 0xff);
-      Decode(&_volume, 0xfe);
-      Decode(&_lidStatus, 0xfd);
-      Decode(&_temp, 0xfc);
-      Decode(&_humid, 0xfb);
-      Decode(&_flameStatus, 0xfa);
-      Decode(&_soundStatus, 0xf9);
-      Decode_press(&_carbon, 0xf8);
-      Decode_press(&_methane, 0xf7);
-      Decode_press(&_light, 0xf6);
-      Decode(&_pitch, 0xf5);
-      Decode(&_roll, 0xf4);
-      Decode_press(&_press, 0xf3);
-      Decode(&_batt, 0xf2);
+      Decode(&_volume, 0xff);
+      Decode(&_lidStatus, 0xfe);
+      Decode(&_temp, 0xfd);
+      Decode(&_humid, 0xfc);
+      Decode(&_flameStatus, 0xfb);
+      Decode(&_soundStatus, 0xfa);
+      Decode_press(&_carbon, 0xf9);
+      Decode_press(&_methane, 0xf8);
+      Decode_press(&_light, 0xf7);
+      Decode(&_pitch, 0xf6);
+      Decode(&_roll, 0xf5);
+      Decode_press(&_press, 0xf4);
       Decode_pointer++;
       if (Decode_pointer >= RX_buffer_size)Decode_pointer = 0;
     }
-    //    Serial.print(F("data = "));  Serial.print(_binID);
-    //    Serial.print(F(" "));  Serial.print(_volume);
+    //    Serial.print(F("data = ")); Serial.print(_volume);
     //    Serial.print(F(" "));  Serial.print(_lidStatus);
     //    Serial.print(F(" "));  Serial.print(_temp);
     //    Serial.print(F(" "));  Serial.print(_humid);
@@ -238,27 +249,30 @@ void loop() {
     //    Serial.print(F(" "));  Serial.print(_light);
     //    Serial.print(F(" "));  Serial.print(_pitch);
     //    Serial.print(F(" "));  Serial.print(_roll);
-    //    Serial.print(F(" "));  Serial.print(_press);
-    //    Serial.print(F(" "));  Serial.println(_batt);
+    //    Serial.print(F(" "));  Serial.println(_press);
   }
 
-  if (_binID != 0 && _volume != 0 && _lidStatus != 0 && _temp != 0 && _humid != 0
+  if (_volume != 0 && _lidStatus != 0 && _temp != 0 && _humid != 0
       && _flameStatus != 0 && _soundStatus != 0 && _carbon != 0 && _methane != 0
-      &&  _light != 0 && _pitch != 0 && _roll != 0 && _press != 0  && _batt != 0 )
+      &&  _light != 0 && _pitch != 0 && _roll != 0 && _press != 0)
   {
-    Serial.println(F("MQTT..."));
-    
-    String data_s1 = String(_volume) + "," + String(_lidStatus) + "," + String(_temp) + ","
-                     + String(_humid) + "," + String(_flameStatus) + "," + String(_soundStatus) + "," +
-                     String(_carbon) + "," + String(_methane) + "," + String(_light);
-    String data_s2 = String(_pitch) + "," + String(_roll) + "," + String(_press) + "," + String(_batt);
-    String data_s3 = gps_lat + ","  + gps_lon + "," + gps_alt;
+    _batt = analogRead(A0) * (5.0 / 1023.0);
+    _batt = map(_batt, 0, 5, 0, 100);
 
-    mqtt.Publish("/SmartTrash/gearname/binID/id", String(_binID), false);
+    Serial.print(F("MQTT..."));
+    String data_s1 = String(_volume) + "," + String(_lidStatus) + "," + String(_temp) + ","
+                     + String(_humid) + "," + String(_flameStatus); 
+    String data_s2 = String(_pitch) + "," + String(_roll) + "," + String(_press) + "," + String(_batt);
+    String data_s3 = String(_soundStatus) + "," + String(_carbon) + "," + String(_methane) + "," + String(_light);
+
+    // mqtt data sent
     mqtt.Publish("/SmartTrash/gearname/binID/data1", data_s1, false);
+    delay(1000);
     mqtt.Publish("/SmartTrash/gearname/binID/data2", data_s2, false);
+    delay(1000);
     mqtt.Publish("/SmartTrash/gearname/binID/data3", data_s3, false);
-    delay(2000);
+    delay(1000);
+    Serial.println(F("Done"));
     gsm.PowerOff();
     while (1);
   }
