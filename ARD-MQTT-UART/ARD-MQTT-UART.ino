@@ -28,6 +28,21 @@ UCxMQTT mqtt;
 AltSoftSerial mySerial;
 
 #define _binID 1234
+#define SS_pin  A5
+#define _volume_OK            1<<0
+#define _lidStatus_OK         1<<1
+#define _temp_OK              1<<2
+#define _humid_OK             1<<3
+#define _flameStatus_OK       1<<4
+#define _soundStatus_OK       1<<5
+#define _carbon_OK            1<<6
+#define _methane_OK           1<<7
+#define _light_OK             1<<8
+#define _pitch_OK             1<<9
+#define _roll_OK              1<<10
+#define _press_OK             1<<11
+uint16_t is_data_OK = 0;
+
 #define RX_buffer_size 100
 volatile uint8_t RX_buffer[RX_buffer_size] = {0};
 volatile uint16_t  RX_pointer = 0;
@@ -46,7 +61,7 @@ float _lidStatus, _flameStatus, _soundStatus;
 float  _light, _carbon, _methane;
 float _press;
 byte _batt = 0;
-
+byte count = 0;
 //////////////////////////////UART////////////////////////////////
 void serialEvent() {
   while (Serial.available()) {
@@ -56,12 +71,13 @@ void serialEvent() {
   }
 }
 
-void Decode(float* value, uint8_t header)
+uint8_t Decode(float* value, uint8_t header)
 {
   uint8_t tmp_pointer = Decode_pointer;
   uint8_t tmp_header[3] = {0};
   uint8_t tmp_data_pointer[3] = {0};
   int16_t data_buffer = 0;
+  uint8_t OK = 0;
   for (int8_t i = 0; i < 3 ; i++)
   {
     tmp_header[i] = RX_buffer[tmp_pointer];
@@ -79,16 +95,19 @@ void Decode(float* value, uint8_t header)
     {
       uint16_t tmp = (uint16_t)tmp_data_pointer[0] << 8 | (uint16_t)tmp_data_pointer[1];
       * value = (float)(tmp) * 0.01f;
+      OK = 1;
     }
   }
+  return OK;
 }
 
-void Decode_press(float* value, uint8_t header)
+uint8_t Decode_press(float* value, uint8_t header)
 {
   uint8_t tmp_pointer = Decode_pointer;
   uint8_t tmp_header[3] = {0};
   uint8_t tmp_data_pointer[3] = {0};
   int16_t data_buffer = 0;
+  uint8_t OK = 0;
   for (int8_t i = 0; i < 3 ; i++)
   {
     tmp_header[i] = RX_buffer[tmp_pointer];
@@ -106,53 +125,61 @@ void Decode_press(float* value, uint8_t header)
     {
       uint16_t tmp = (uint16_t)tmp_data_pointer[0] << 8 | (uint16_t)tmp_data_pointer[1];
       * value = (float)(tmp);
+      OK = 1;
     }
   }
+  return OK;
 }
-
+//////////////////////////////calVoltage////////////////////////////////
+float calculate_initial_capacity_percentage(float voltage)
+{
+  float capacity = 0;
+  if (voltage > 4.2) {
+    capacity = 100;
+  } else if (voltage < 3.2 ) {
+    capacity = 0;
+  } else if (voltage > 4 ) {
+    capacity = 80 * voltage - 236;
+  } else if (voltage > 3.67 ) {
+    capacity = 212.53 * voltage - 765.29;
+  } else {
+    capacity = 29.787234 * voltage - 95.319149 ;
+  }
+  return capacity;
+}
 //////////////////////////////mainSETUP////////////////////////////////
 void setup()  {
   Serial.begin(9600);
   Serial.print(F("freeRam = "));
   Serial.println(freeMemory());
-  pinMode(6, OUTPUT);
-  digitalWrite(6, 0);
+  pinMode(SS_pin, OUTPUT);
   /////////////////////////////3G//////////////////////////////////
   gsm.begin(&mySerial, 9600);
   Serial.println(F("Init..."));
   gsm.PowerOn();
   while (gsm.WaitReady()) {}
-  net.DisConnect();
-  net.Configure(APN, USER, PASS);
-  net.Connect();
+  Serial.println(millis() / 1000);
   //////////////////////////////GPS//////////////////////////////
   Serial.println(F("Start GPS"));
   gps.Start();
   Serial.println(F("Enable NMEA"));
   gps.EnableNMEA();
 
-  //  gps_data = gps.GetNMEA("GGA");
-  //  Serial.println(gps.GetNMEA("GGA"));
-  //  while (gps_data.substring(0, 8) == "$GPGGA,," || gps_data.substring(0, 8) == "Please W" || gps_data.substring(0, 8) == "$GPGGA,1") {
-  //    gps_data = gps.GetNMEA("GGA");
-  //    Serial.println(gps_data);
-  //    digitalWrite(6, 1);
-  //    delay(3000);
-  //    digitalWrite(6, 0);
-  //  }
+  gps_data = gps.GetNMEA("GGA");
+  Serial.println(gps.GetNMEA("GGA"));
 
-  for (int i = 1; i <= 7; i++) {
+  while (gps_data.substring(0, 8) == "$GPGGA,," || gps_data.substring(0, 8) == "Please W" || count == 10) {// || gps_data.substring(0, 8) == "$GPGGA,1") {
     gps_data = gps.GetNMEA("GGA");
-    digitalWrite(6, 1);
+    Serial.println(gps_data);
     delay(3000);
-    digitalWrite(6, 0);
+    count += 1;
   }
 
   Serial.print(F("Done... "));
   //  Serial.println(gps.GetNMEA("GGA"));
 
   //  gps_data = gps.GetNMEA("GGA");
-  if (gps_data.substring(0, 6) == "$GPGGA") {
+  if (gps_data.substring(0, 6) == "$GPGGA" && count != 30) {
     gps_data.toCharArray(GNSS_data, 75);
 
     String gps_cal_s = gps_data.substring(18, 27);
@@ -190,11 +217,18 @@ void setup()  {
     Serial.print(F("  "));
     Serial.println(gps_alt);
     delay(1000);
+    Serial.println(F("Stop GPS"));
+    gps.Stop();
+    gps.DisableNMEA();
+    Serial.println(millis() / 1000);
   }
   //////////////////////////////MQTT////////////////////////////////
+  Serial.println(F("MQTT Connected"));
+  net.DisConnect();
+  net.Configure(APN, USER, PASS);
+  net.Connect();
   do  {
-    //    Serial.println(F("Connect Server"));
-    //    Serial.println(F("wait connect"));
+    Serial.println(F("Connect Server"));
     if (mqtt.DisconnectMQTTServer())
     {
       mqtt.ConnectMQTTServer(MQTT_SERVER, MQTT_PORT);
@@ -206,35 +240,32 @@ void setup()  {
   Serial.println(F("Server Connected"));
   unsigned char ret = mqtt.Connect(MQTT_ID, MQTT_USER, MQTT_PASSWORD);
   Serial.println(mqtt.ConnectReturnCode(ret));
+  Serial.println(millis() / 1000);
   // mqtt first sent
-  mqtt.Publish("/SmartTrash/gearname/binID/id", String(_binID), false);
+  mqtt.Publish("/SmartTrash/gearname/binID", String(_binID), false);
   String data_s4 = gps_lat + ","  + gps_lon + "," + gps_alt;
   mqtt.Publish("/SmartTrash/gearname/binID/gps", data_s4, false);
 }
 //////////////////////////////mainLOOP////////////////////////////////
 void loop() {
-  digitalWrite(6, 1);
-  delay(100);
-  digitalWrite(6, 0);
-  delay(100);
-
   unsigned long current = millis();
-  if (current - prev > 500) {
+  if (current - prev > 1000) {
     prev = current;
     Serial.println(F("Decode..."));
     while (Decode_pointer != RX_pointer) {
-      Decode(&_volume, 0xff);
-      Decode(&_lidStatus, 0xfe);
-      Decode(&_temp, 0xfd);
-      Decode(&_humid, 0xfc);
-      Decode(&_flameStatus, 0xfb);
-      Decode(&_soundStatus, 0xfa);
-      Decode_press(&_carbon, 0xf9);
-      Decode_press(&_methane, 0xf8);
-      Decode_press(&_light, 0xf7);
-      Decode(&_pitch, 0xf6);
-      Decode(&_roll, 0xf5);
-      Decode_press(&_press, 0xf4);
+      if (Decode(&_volume, 0xff)) is_data_OK |= _volume_OK;
+      if (Decode(&_lidStatus, 0xfe)) is_data_OK |= _lidStatus_OK;
+      if (Decode(&_temp, 0xfd)) is_data_OK |= _temp_OK;
+      if (Decode(&_humid, 0xfc)) is_data_OK |= _humid_OK;
+      if (Decode(&_flameStatus, 0xfb)) is_data_OK |= _flameStatus_OK;
+      if (Decode(&_soundStatus, 0xfa)) is_data_OK |= _soundStatus_OK;
+      if (Decode_press(&_carbon, 0xf9)) is_data_OK |= _carbon_OK;
+      if (Decode_press(&_methane, 0xf8)) is_data_OK |= _methane_OK;
+      if (Decode_press(&_light, 0xf7)) is_data_OK |= _light_OK;
+      if (Decode(&_pitch, 0xf6)) is_data_OK |= _pitch_OK;
+      if (Decode(&_roll, 0xf5)) is_data_OK |= _roll_OK;
+      if (Decode_press(&_press, 0xf4)) is_data_OK |= _press_OK;
+
       Decode_pointer++;
       if (Decode_pointer >= RX_buffer_size)Decode_pointer = 0;
     }
@@ -252,27 +283,24 @@ void loop() {
     //    Serial.print(F(" "));  Serial.println(_press);
   }
 
-  if (_volume != 0 && _lidStatus != 0 && _temp != 0 && _humid != 0
-      && _flameStatus != 0 && _soundStatus != 0 && _carbon != 0 && _methane != 0
-      &&  _light != 0 && _pitch != 0 && _roll != 0 && _press != 0)
-  {
-    _batt = analogRead(A0) * (5.0 / 1023.0);
-    _batt = map(_batt, 0, 5, 0, 100);
-
+  if (is_data_OK == 0x0fff) {
+    _batt = calculate_initial_capacity_percentage((float)analogRead(A0) * 0.00488758553f);
     Serial.print(F("MQTT..."));
     String data_s1 = String(_volume) + "," + String(_lidStatus) + "," + String(_temp) + ","
-                     + String(_humid) + "," + String(_flameStatus); 
+                     + String(_humid) + "," + String(_flameStatus);
     String data_s2 = String(_pitch) + "," + String(_roll) + "," + String(_press) + "," + String(_batt);
     String data_s3 = String(_soundStatus) + "," + String(_carbon) + "," + String(_methane) + "," + String(_light);
 
     // mqtt data sent
     mqtt.Publish("/SmartTrash/gearname/binID/data1", data_s1, false);
-    delay(1000);
+    //    delay(1000);
     mqtt.Publish("/SmartTrash/gearname/binID/data2", data_s2, false);
-    delay(1000);
+    //    delay(1000);
     mqtt.Publish("/SmartTrash/gearname/binID/data3", data_s3, false);
     delay(1000);
     Serial.println(F("Done"));
+    digitalWrite(SS_pin, HIGH); // tell STM32 Mission Complete
+    Serial.println(millis() / 1000);
     gsm.PowerOff();
     while (1);
   }
