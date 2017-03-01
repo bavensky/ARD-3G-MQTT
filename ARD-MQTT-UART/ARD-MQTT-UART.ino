@@ -269,18 +269,20 @@ void loop() {
       Decode_pointer++;
       if (Decode_pointer >= RX_buffer_size)Decode_pointer = 0;
     }
-    //    Serial.print(F("data = ")); Serial.print(_volume);
-    //    Serial.print(F(" "));  Serial.print(_lidStatus);
-    //    Serial.print(F(" "));  Serial.print(_temp);
-    //    Serial.print(F(" "));  Serial.print(_humid);
-    //    Serial.print(F(" "));  Serial.print(_flameStatus);
-    //    Serial.print(F(" "));  Serial.print(_soundStatus);
-    //    Serial.print(F(" "));  Serial.print(_carbon);
-    //    Serial.print(F(" "));  Serial.print(_methane);
-    //    Serial.print(F(" "));  Serial.print(_light);
-    //    Serial.print(F(" "));  Serial.print(_pitch);
-    //    Serial.print(F(" "));  Serial.print(_roll);
-    //    Serial.print(F(" "));  Serial.println(_press);
+    
+    //    Serial.print(F("_batt ")); Serial.print(_batt, 1);
+    //    Serial.print(F("_volume ")); Serial.print(_volume, 1);
+    //    Serial.print(F(" _lidStatus "));  Serial.print(_lidStatus, 1);
+    //    Serial.print(F(" _temp "));  Serial.print(_temp, 1);
+    //    Serial.print(F(" _humid "));  Serial.print(_humid, 1);;
+    //    Serial.print(F(" _flameStatus "));  Serial.print(_flameStatus, 1);
+    //    Serial.print(F(" _soundStatus "));  Serial.print(_soundStatus, 1);
+    //    Serial.print(F(" _carbon "));  Serial.print(_carbon, 1);
+    //    Serial.print(F(" _meth "));  Serial.print(_methane, 1);
+    //    Serial.print(F(" _light "));  Serial.print(_light, 1);
+    //    Serial.print(F(" _pitch "));  Serial.print(_pitch, 1);
+    //    Serial.print(F(" _roll "));  Serial.print(_roll, 1);
+    //    Serial.print(F(" _press "));  Serial.println(_press, 1);
   }
 
   if (is_data_OK == 0x0fff) {
@@ -293,9 +295,7 @@ void loop() {
 
     // mqtt data sent
     mqtt.Publish("/SmartTrash/gearname/binID/data1", data_s1, false);
-    //    delay(1000);
     mqtt.Publish("/SmartTrash/gearname/binID/data2", data_s2, false);
-    //    delay(1000);
     mqtt.Publish("/SmartTrash/gearname/binID/data3", data_s3, false);
     delay(1000);
     Serial.println(F("Done"));
